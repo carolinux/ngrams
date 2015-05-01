@@ -1,13 +1,16 @@
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 import random
 import sys
+import numpy as np
 
+import etl
 
 START="^"
 END="$"
 
 EOSENTENCE = set(["?",".","...","!","!!"])
 IGNORE = set([",","-","(",")",""])
+IGNORE_PARTS = set(["http://","https://"])
 
 class Ngram:
     def __init__(self, text, start, end, isStart, isEnd, len):
@@ -66,7 +69,7 @@ class Brain:
                             ngrams[i].text = ngrams[i].text[len(ngrams[i].start)+1:]
                     return " ".join(map(lambda x:x.text,ngrams)),ngrams
             else:
-                import ipdb; ipdb.set_trace()
+                #import ipdb; ipdb.set_trace()
                 self.getNextNgram(ngrams[-1])
                 return None, ngrams# could backtrack for more advanced logic!
 
@@ -81,6 +84,7 @@ def isEndOfSentence(word):
 def load(text, brain, n=2):
     text = text.replace("\n"," ")
     words = filter(lambda x: x not in IGNORE,map(lambda x:x.strip(),text.split(" ")))
+    words = filter(lambda x: np.array([not p in x for p in IGNORE_PARTS]).all(), words)
     ngrams = []
     for i in range(n,len(words)):
         lb = max(i-n,0) # get the lower bound for the ngram
@@ -106,21 +110,21 @@ def load(text, brain, n=2):
 
 def main(args):
     brain = Brain()
-    text = open("./shakespeare.txt").read()
-    load(text, brain, n=int(args[0]))
-    for i in range(30):
-        print "generating:"
+    #text = open(args[0]).read() # for plain text file
+    lines = etl.get_statuses_as_lines(args[0])
+    for line in lines:
+        load(line, brain, n=int(args[1]))
+    for i in range(50):
+        #print "generating:"
         sentence, details = brain.generate()
         if sentence is not None:
             print sentence
-            print details
+            print "------"
+            #print details
         else:
-            print "--- generation failed---"
+            #print "--- generation failed---"
+            continue
 
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-
-
-
