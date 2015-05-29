@@ -11,6 +11,7 @@ END="$"
 EOSENTENCE = set(["?",".","...","!","!!"])
 IGNORE = set([",","-","(",")",""])
 IGNORE_PARTS = set(["http://","https://"])
+MAX_SENTENCE_LENGTH = 1000
 
 class Ngram:
     def __init__(self, text, start, end, isStart, isEnd, len):
@@ -20,6 +21,9 @@ class Ngram:
         self.isStart = isStart
         self.isEnd = isEnd
         self.len =len
+
+    def __str__(self):
+        return ("^" if self.isStart else "") + self.text + ("$" if self.isEnd else "")
 
 class Brain:
 
@@ -48,7 +52,9 @@ class Brain:
         if len(choices) == 0:
             return None
         else:
-            return random.sample(choices,1)[0]
+            res = random.sample(choices,1)[0]
+            return res
+            
 
     def generate(self,wordHint=15):
         sentenceSize = 0
@@ -58,12 +64,11 @@ class Brain:
         while(True):
             newNgram = self.getNextNgram(prevNgram, first=first)
             first = False
-            if newNgram is not None:
+            if newNgram is not None :
                 ngrams.append(newNgram)
                 sentenceSize+=newNgram.len
                 prevNgram = newNgram
-                if sentenceSize>=wordHint and newNgram.isEnd:
-                    #import ipdb; ipdb.set_trace()
+                if (sentenceSize>=wordHint and newNgram.isEnd) or (sentenceSize>=MAX_SENTENCE_LENGTH):
                     for i,n in enumerate(ngrams):
                         if i>0 and ngrams[i-1].end == ngrams[i].start:
                             ngrams[i].text = ngrams[i].text[len(ngrams[i].start)+1:]
@@ -102,7 +107,6 @@ def load(text, brain, n=2):
         except Exception,e:
             print e
             print words[lb:i], curr_words
-            import ipdb; ipdb.set_trace()
         ngrams.append(ngram)
         #if ngram.text=="our person.":
             #import ipdb; ipdb.set_trace()
@@ -113,6 +117,8 @@ def main(args):
     #text = open(args[0]).read() # for plain text file
     lines = etl.get_statuses_as_lines(args[0])
     for line in lines:
+        if not isEndOfSentence(line):
+            line = line + "."
         load(line, brain, n=int(args[1]))
     for i in range(50):
         #print "generating:"
